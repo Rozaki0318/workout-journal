@@ -3,6 +3,9 @@ name: Deploy to AWS (dev)
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'infra/*'
+      - '.github/workflows/deploy-dev.yml'
   workflow_dispatch: {}
 
 concurrency:
