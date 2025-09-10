@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: workout-journal (dev) minimal API
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 10
+    MemorySize: 256
+    Architectures: [ x86_64 ]
+    Tracing: Active
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: ['GET','POST','OPTIONS']
+        AllowHeaders: ['*']
+
+  EchoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: app.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Echo:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ping
+            Method: GET
+
+Outputs:
+  ApiEndpoint:
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"

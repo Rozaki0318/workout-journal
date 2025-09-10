@@ -1,0 +1,54 @@
+name: Deploy to AWS (dev)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install AWS CLI & SAM
+        run: |
+          python -m pip install --upgrade pip
+          pip install awscli aws-sam-cli
+
+      - name: Configure AWS credentials (OIDC AssumeRole)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          role-session-name: gha-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: WhoAmI
+        run: aws sts get-caller-identity
+
+      - name: SAM Validate
+        working-directory: infra
+        run: sam validate
+
+      - name: SAM Build
+        working-directory: infra
+        run: sam build
+
+      - name: SAM Deploy
+        working-directory: infra
+        run: sam deploy
