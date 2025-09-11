@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'infra/*'
+      - 'infra/**'
       - '.github/workflows/deploy-dev.yml'
   workflow_dispatch: {}
 

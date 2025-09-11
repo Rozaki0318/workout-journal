@@ -28,7 +28,7 @@ def handler(event, context):
     pk_user = f"USER#{user_id}"
     
     # /ping
-    if method == "GET" and path.endswith("/ping"):
+    if method == "GET" and route.endswith("/ping"):
         return _resp(200, {"ok": True, "stage": os.getenv("STAGE","dev"), "path": path})
 
     # ---- /sessions ----
