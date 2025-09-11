@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: workout-journal (dev) minimal API
+Description: workout-journal (dev) API
 
 Parameters:
   Stage:
@@ -17,6 +17,7 @@ Globals:
     Environment:
       Variables:
         STAGE: !Ref Stage
+        TABLE_NAME: !Ref WorkoutTable
 
 Resources:
   HttpApi:
@@ -28,19 +29,54 @@ Resources:
         AllowMethods: ['GET','POST','OPTIONS']
         AllowHeaders: ['*']
 
-  EchoFunction:
+  # 単一テーブル設計：ユーザー別・時系列GSI
+  WorkoutTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: PK,     AttributeType: S }
+        - { AttributeName: SK,     AttributeType: S }
+        - { AttributeName: GSI1PK, AttributeType: S }
+        - { AttributeName: GSI1SK, AttributeType: N }
+      KeySchema:
+        - { AttributeName: PK, KeyType: HASH }
+        - { AttributeName: SK, KeyType: RANGE }
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - { AttributeName: GSI1PK, KeyType: HASH }
+            - { AttributeName: GSI1SK, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+
+  # 旧 EchoFunction を統合：/ping /sessions(GET,POST)
+  ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
       Handler: app.handler
       Policies:
         - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WorkoutTable
       Events:
-        Echo:
+        Ping:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Path: /ping
+            Method: GET
+        CreateSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions
+            Method: POST
+        ListSessions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions
             Method: GET
 
 Outputs:
