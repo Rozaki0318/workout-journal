@@ -137,22 +137,30 @@ def handler(event, context):
     if sid and route.endswith(f"/sessions/{sid}/sets") and method == "GET":
         qs = event.get("queryStringParameters") or {}
         limit = int(qs.get("limit", "20"))
-        r = TABLE.query(
-            IndexName="GSI1",
-            KeyConditionExpression=Key("GSI1PK").eq(f"SESSION#{sid}"),
-            ScanIndexForward=False,
-            Limit=limit
-        )
-        items = [
-            {
+        try:
+            r = TABLE.query(
+                IndexName="GSI1",
+                KeyConditionExpression="#gpk = :gpk",
+                ExpressionAttributeNames={"#gpk": "GSI1PK"},
+                ExpressionAttributeValues={":gpk": f"SESSION#{sid}"},
+                ScanIndexForward=False,
+                Limit=limit
+            )
+        except Exception as e:
+            return _resp(500, {"message": "query failed", "error": str(e)})
+
+        items = []
+        for x in r.get("Items", []):
+            if x.get("type") != "set":
+                continue
+            items.append({
                 "seq": int(x.get("seq", 0)),
                 "weight": float(x.get("weight", 0)),
                 "reps": int(x.get("reps", 0)),
                 "note": x.get("note",""),
                 "createdAt": int(x.get("createdAt", 0)),
-            }
-            for x in r.get("Items", []) if x.get("type") == "set"
-        ]
+            })
+
         return _resp(200, {"items": items})
 
     return _resp(404, {"message": "Not Found"})
