@@ -78,6 +78,18 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /sessions
             Method: GET
+        CreateSet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/sets
+            Method: POST
+        ListSets:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/sets
+            Method: GET
 
 Outputs:
   ApiEndpoint:
