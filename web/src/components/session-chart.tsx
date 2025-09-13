@@ -1,12 +1,17 @@
 "use client";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import {
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+} from "recharts";
 
 export type SetItem = { seq: number; weight: number; reps: number; note?: string; createdAt: number };
 
 export default function SessionChart({ sets }: { sets: SetItem[] }) {
   const data = [...sets]
     .sort((a, b) => a.seq - b.seq)
-    .map(s => ({ seq: s.seq, weight: s.weight, reps: s.reps, volume: s.weight * s.reps }));
+    .map(s => ({
+      seq: s.seq,
+      volume: (s.weight ?? 0) * (s.reps ?? 0),   // 総重量
+    }));
 
   if (!data.length) return <p className="text-sm text-muted-foreground">まだデータがありません。</p>;
 
@@ -18,8 +23,7 @@ export default function SessionChart({ sets }: { sets: SetItem[] }) {
           <XAxis dataKey="seq" />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey="weight" strokeWidth={2} />
-          <Line type="monotone" dataKey="reps" strokeWidth={2} />
+          <Line type="monotone" dataKey="volume" strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -167,9 +167,14 @@ export default function Home() {
                   placeholder="胸トレ など"
                 />
               </div>
-              <Button onClick={createSession} disabled={loading}>
-                {loading ? "Creating..." : "Create session"}
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={createSession} disabled={loading}>
+                  {loading ? "Creating..." : "Create session"}
+                </Button>
+                <Button variant="destructive" onClick={deleteSession} disabled={!sid}>
+                  Delete session
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -186,7 +191,8 @@ export default function Home() {
                 <SelectContent>
                   {sessions.map((s) => (
                     <SelectItem key={s.sessionId} value={s.sessionId}>
-                      {s.sessionId}（
+                      {s.note ? `${s.note}` : ""}
+                      <span className="opacity-70">({s.sessionId})</span>
                       {new Date((s.lastUpdatedAt ?? s.createdAt) * 1000).toLocaleString()} /{" "}
                       {s.setCount ?? 0} sets）
                     </SelectItem>
@@ -200,9 +206,6 @@ export default function Home() {
               )}
             </CardContent>
           </Card>
-          <Button variant="destructive" onClick={deleteSession} disabled={!sid}>
-            セッション削除
-          </Button>
         </div>
 
         {/* セット追加 */}
@@ -248,7 +251,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Sets</span>
+              <span>Sets{currentSession?.note ? ` - ${currentSession.note}` : ""}</span>
               {currentSession && (
                 <span className="text-xs text-muted-foreground">
                   updated: {new Date((currentSession.lastUpdatedAt ?? currentSession.createdAt) * 1000).toLocaleString()}

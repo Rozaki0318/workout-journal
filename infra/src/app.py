@@ -50,6 +50,7 @@ def handler(event, context):
             "createdAt": created,
             "lastUpdatedAt": created,
             "setCount": 0,
+            "note": note,
             "GSI1PK": pk_user,       # セッション一覧（ユーザー最新順）
             "GSI1SK": created
         })
