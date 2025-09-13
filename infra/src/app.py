@@ -162,6 +162,76 @@ def handler(event, context):
             })
 
         return _resp(200, {"items": items})
+    
+    # DELETE: セット  /sessions/{sid}/sets/{seq}
+    if sid and "sets" in route and method == "DELETE" and path_params.get("seq") is not None:
+        # seq は 1,2,3... を想定（保存キーは零詰め 001,002...）
+        try:
+            seq_int = int(path_params["seq"])
+            if seq_int < 1: raise ValueError
+        except Exception:
+            return _resp(400, {"message": "seq must be positive integer"})
 
+        seq_str = f"{seq_int:03d}"
+        now = _now()
+
+        # 1) セット行の存在チェック付き削除
+        try:
+            TABLE.delete_item(
+                Key={"PK": pk_user, "SK": f"SET#{sid}#{seq_str}"},
+                ConditionExpression="attribute_exists(PK)"
+            )
+        except TABLE.meta.client.exceptions.ConditionalCheckFailedException:
+            return _resp(404, {"message": "set not found"})
+
+        # 2) 親セッションの setCount を -1、最終更新時刻を更新（存在しないなら無視）
+        try:
+            TABLE.update_item(
+                Key={"PK": pk_user, "SK": f"SESSION#{sid}"},
+                UpdateExpression="ADD setCount :neg SET lastUpdatedAt = :now",
+                ExpressionAttributeValues={
+                    ":neg": Decimal(-1),
+                    ":now": Decimal(_now()),
+                }
+            )
+        except Exception:
+            pass  # なくても致命ではない
+
+        return _resp(200, {"deleted": True})
+
+    # DELETE: セッション  /sessions/{sid}
+    if sid and route.endswith(f"/sessions/{sid}") and method == "DELETE":
+        # 1) そのセッション配下のセットを GSI1 で列挙
+        try:
+            q = TABLE.query(
+                IndexName="GSI1",
+                KeyConditionExpression="#pk = :pk",
+                ExpressionAttributeNames={"#pk": "GSI1PK"},
+                ExpressionAttributeValues={":pk": f"SESSION#{sid}"},
+                ProjectionExpression="PK, SK"
+            )
+            items = q.get("Items", [])
+        except Exception as e:
+            return _resp(500, {"message": "query sets failed", "error": str(e)})
+
+        # 2) まとめて削除（25件ずつ自動バッチ）
+        deleted = 0
+        with TABLE.batch_writer() as batch:
+            for it in items:
+                batch.delete_item(Key={"PK": it["PK"], "SK": it["SK"]})
+                deleted += 1
+
+        # 3) 親セッション行を削除（存在チェック付き）
+        try:
+            TABLE.delete_item(
+                Key={"PK": pk_user, "SK": f"SESSION#{sid}"},
+                ConditionExpression="attribute_exists(PK)"
+            )
+        except TABLE.meta.client.exceptions.ConditionalCheckFailedException:
+            # セッションが無かった（既に消えている）場合
+            pass
+
+        return _resp(200, {"deletedSession": True, "deletedSets": deleted})
+    
     return _resp(404, {"message": "Not Found"})
 

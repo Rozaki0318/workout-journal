@@ -90,6 +90,18 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /sessions/{sessionId}/sets
             Method: GET
+        DeleteSet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/sets/{seq}
+            Method: DELETE
+        DeleteSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}
+            Method: DELETE
 
 Outputs:
   ApiEndpoint:
